@@ -1,0 +1,17 @@
+{
+  "name": "aws-website-canary",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.js",
+  "scripts": {
+    "setup": "cd src && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 npm install",
+    "local": "CHROME_EXECUTABLE_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' WEBSITE_URL=https://serverlessrepo.aws.amazon.com WAIT_FOR_SELECTOR=.applications-card-list-card__header node -e \"require('./src/index.js').handler().then(v => console.log(v)).catch(v => console.error(v))\"",
+    "package": "sam package --template-file template.yaml --output-template-file template.packaged.yaml --s3-bucket aws-website-canary",
+    "publish": "sam publish --template template.packaged.yaml --region us-east-1",
+    "deploy": "sam deploy --template-file template.packaged.yaml --stack-name $STACK_NAME --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --parameter-overrides AlarmNotificationEmail=$ALARM_NOTIFICATION_EMAIL",
+    "package-deploy": "npm run package && npm run deploy"
+  },
+  "author": "",
+  "dependencies": {
+  }
+}

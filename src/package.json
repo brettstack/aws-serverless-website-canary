@@ -1,0 +1,11 @@
+{
+  "name": "aws-serverless-website-canary",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "author": "",
+  "dependencies": {
+    "puppeteer": "^1.11.0"
+  }
+}

@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Continuously run tests against your websites and be alerted of any outages.
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: aws-serverless-website-canary
+    Description: Serverless Website Canary
+    Author: BrettStack
+    SpdxLicenseId: Apache-2.0
+    LicenseUrl: LICENSE.txt
+    ReadmeUrl: README.md
+    Labels: ['serverless', 'web', 'website', 'canary', 'health-check', 'puppeteer']
+    HomePageUrl: https://github.com/brettstack/aws-serverless-website-canary
+    SourceCodeUrl: https://github.com/brettstack/aws-serverless-website-canary
+    SemanticVersion: 0.1.2
+
+Parameters:
+  PuppeteerTestSchedule:
+    Description: How frequently to run tests. See https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html for valid expressions.
+    Type: String
+    Default: rate(1 minute)
+
+  WebsiteUrl:
+    Description: URL of website to run this canary against
+    Type: String
+    Default: https://serverlessrepo.aws.amazon.com
+
+  WaitForSelector:
+    Description: CSS Selector of the DOM Element to wait for before considering the test a success
+    Type: String
+    Default: .applications-card-list-card__header
+
+  AlarmNotificationTopic:
+    Description: SNS Topic (ARN) to notify when a problem with the website is detected. Alternatively, specify an email
+    Type: String
+    Default: ''
+  
+  AlarmNotificationEmail:
+    Description: If you don't specify AlarmNotificationTopic; specify an Email address to be notified when a problem with the website is detected.
+    Type: String
+    Default: ''
+
+Conditions:
+  UseBasicEmailSnsTopic:
+    !Equals
+      - !Ref AlarmNotificationTopic
+      - ''
+
+Resources:
+  ServerlessChromeLayerApplication:
+    Type: 'AWS::Serverless::Application'
+    Properties:
+      TimeoutInMinutes: 20 
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:us-east-1:347971939225:applications/serverless-chrome-layer
+        SemanticVersion: 0.1.1
+
+  PuppeteerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src
+      Handler: index.handler
+      Runtime: nodejs8.10
+      MemorySize: 1024
+      Timeout: 600
+      Layers:
+        - !GetAtt ServerlessChromeLayerApplication.Outputs.ServerlessChromeLayerArn
+      Events:
+        Cron:
+          Type: Schedule
+          Properties:
+            Schedule: !Ref PuppeteerTestSchedule
+      Environment:
+        Variables:
+          WEBSITE_URL: !Ref WebsiteUrl
+          WAIT_FOR_SELECTOR: !Ref WaitForSelector
+  
+  PuppeteerFunctionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarms when PuppeteerFunction has 2 errors within 10 minutes
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref PuppeteerFunction
+      Period: 60
+      EvaluationPeriods: 10
+      DatapointsToAlarm: 2
+
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Threshold: 0
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If
+          - UseBasicEmailSnsTopic
+          - !Ref AlarmNotificationBasicEmailSnsTopic
+          - !Ref AlarmNotificationTopic
+
+  AlarmNotificationBasicEmailSnsTopic:
+    Type: AWS::SNS::Topic
+    Condition: UseBasicEmailSnsTopic
+    Properties:
+      Subscription:
+      - Endpoint: !Ref AlarmNotificationEmail
+        Protocol: email

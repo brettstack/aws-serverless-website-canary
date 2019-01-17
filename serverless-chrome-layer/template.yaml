@@ -1,0 +1,29 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless Chrome/Chromium Layer
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: serverless-chrome-layer
+    Description: Serverless Chrome/Chromium Layer
+    Author: BrettStack
+    SpdxLicenseId: Apache-2.0
+    LicenseUrl: LICENSE.txt
+    ReadmeUrl: README.md
+    Labels: ['serverless', 'chromium', 'chrome', 'headless', 'puppeteer']
+    HomePageUrl: https://github.com/brettstack/aws-serverless-website-canary
+    SourceCodeUrl: https://github.com/brettstack/aws-serverless-website-canary
+    SemanticVersion: 0.1.1
+
+Outputs:
+  ServerlessChromeLayerArn:
+    Value: !Ref ServerlessChromeLayer
+
+Resources:
+  ServerlessChromeLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      Description: Serverless Chrome/Chromium Layer
+      ContentUri: ./bin
+      LicenseInfo: https://opensource.org/licenses/Apache-2.0
+      RetentionPolicy: Retain
